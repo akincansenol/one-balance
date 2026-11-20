@@ -25,6 +25,7 @@ export async function listActiveKeysViaCache(env: Env, provider: string): Promis
         columns: {
             id: true,
             key: true,
+            accountId: true, // <-- MUST be here
             modelCoolings: true
         },
         where: drizzle.and(drizzle.eq(schema.keys.status, 'active'), drizzle.eq(schema.keys.provider, provider)),
@@ -44,6 +45,49 @@ export async function listActiveKeysViaCache(env: Env, provider: string): Promis
 
 export async function setKeyStatus(env: Env, provider: string, keyId: string, status: string) {
     await d1.db(env).update(schema.keys).set({ status }).where(drizzle.eq(schema.keys.id, keyId))
+
+    const cache = activeKeysCacheByProvider.get(provider)
+    if (cache) {
+        cache.isDirty = true
+    }
+}
+
+export async function updateKeysStatus(env: Env, keyIds: string[], status: string) {
+    if (keyIds.length === 0) {
+        return
+    }
+
+    const db = d1.db(env)
+
+    const affectedKeys = await db.query.keys.findMany({
+        columns: { provider: true },
+        where: drizzle.inArray(schema.keys.id, keyIds)
+    })
+    const affectedProviders = new Set(affectedKeys.map(k => k.provider))
+
+    await db
+        .update(schema.keys)
+        .set({ status, totalCoolingSeconds: 0, modelCoolings: {} })
+        .where(drizzle.inArray(schema.keys.id, keyIds))
+
+    for (const provider of affectedProviders) {
+        const cache = activeKeysCacheByProvider.get(provider)
+        if (cache) {
+            cache.isDirty = true
+        }
+    }
+}
+
+export async function updateKeysStatusByStatus(env: Env, provider: string, fromStatus: string, toStatus: string) {
+    await d1
+        .db(env)
+        .update(schema.keys)
+        .set({
+            status: toStatus,
+            totalCoolingSeconds: 0,
+            modelCoolings: {}
+        })
+        .where(drizzle.and(drizzle.eq(schema.keys.provider, provider), drizzle.eq(schema.keys.status, fromStatus)))
 
     const cache = activeKeysCacheByProvider.get(provider)
     if (cache) {
@@ -87,8 +131,6 @@ export async function setKeyModelCooldownIfAvailable(
                 drizzle.eq(schema.keys.id, keyId),
                 drizzle.or(
                     drizzle.sql`json_extract(${schema.keys.modelCoolings}, ${endAtPath}) IS NULL`,
-                    // if key is already cooling down, do nothing,
-                    // otherwise may wrong extend the recovery time (cache consistency may cause multiple calls)
                     drizzle.sql`json_extract(${schema.keys.modelCoolings}, ${endAtPath}) <= ${now}`
                 )
             )
@@ -157,6 +199,7 @@ interface KeyForAdd {
     key: string
     provider: string
     remark: string
+    accountId?: string // <-- Add this
 }
 
 export async function addKeys(env: Env, keys: KeyForAdd[]) {

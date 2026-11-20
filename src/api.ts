@@ -41,24 +41,40 @@ async function extractRealProviderAndModel(
     if (!model) {
         return null
     }
-    if (provider !== 'compat') {
-        return { provider, model }
+
+    if (provider === 'compat') {
+        const firstSlashIndex = model.indexOf('/')
+        if (firstSlashIndex === -1) {
+            return null
+        }
+
+        const realProvider = model.substring(0, firstSlashIndex)
+        let realModel = model.substring(firstSlashIndex + 1)
+
+        if (!realProvider || !realModel) {
+            return null
+        }
+
+        // Preserve full strings for providers that use namespace/slashes in model names
+        if (realProvider === 'nvidia' || realProvider === 'custom-nvidia') {
+            realModel = model
+            return { provider: 'nvidia', model: realModel }
+        }
+
+        // 🚨 FIX: Strip the 'workers-ai/' prefix for Workers AI
+        if (realProvider === 'workers-ai') {
+            const strippedModel = model.replace(/^workers-ai\//, '');
+            return { provider: 'workers-ai', model: strippedModel }
+        }
+
+        if (realProvider === 'openrouter') {
+            return { provider: 'openrouter', model: model }
+        }
+
+        return { provider: realProvider, model: realModel }
     }
 
-    // find the real provider from model (e.g. google-ai-studio/gemini-2.0-flash)
-    // see https://developers.cloudflare.com/ai-gateway/chat-completion/#curl
-    const realProvider = model.split('/')[0]
-    if (!realProvider) {
-        // bad request
-        return null
-    }
-    const realModel = model.split('/')[1]
-    if (!realModel) {
-        // bad request
-        return null
-    }
-
-    return { provider: realProvider, model: realModel }
+    return { provider, model }
 }
 
 async function extractModel(request: Request, restResource: string): Promise<string | null> {
@@ -102,7 +118,45 @@ async function forward(
     }
 
     const body = request.body ? await request.arrayBuffer() : null
-    const MAX_RETRIES = 30
+    let finalBody = body;
+
+    // --- BODY REWRITING FIXES ---
+    if (body) {
+        try {
+            const text = new TextDecoder().decode(body);
+            const jsonBody = JSON.parse(text);
+            let modified = false;
+
+            // 1. Google AI Studio: Strip 'store' because it rejects OpenAI params
+            if (provider === 'google-ai-studio' && jsonBody.store !== undefined) {
+                delete jsonBody.store;
+                modified = true;
+                console.log('Stripped "store" field for Google AI Studio');
+            }
+
+            // 2. Workers AI: Strip 'workers-ai/' prefix from the model name inside the JSON body
+            if (provider === 'workers-ai' && typeof jsonBody.model === 'string' && jsonBody.model.startsWith('workers-ai/')) {
+                jsonBody.model = jsonBody.model.replace(/^workers-ai\//, '');
+                modified = true;
+                console.log(`Stripped "workers-ai/" from body. New model: ${jsonBody.model}`);
+            }
+
+            if (modified) {
+                finalBody = new TextEncoder().encode(JSON.stringify(jsonBody)).buffer;
+            }
+        } catch (e) {
+            console.error(`Failed to parse/modify body for ${provider}:`, e);
+        }
+    }
+    // ----------------------------
+
+    // 🚨 FIX: Rewrite the URL for Workers AI to use the native endpoint
+    let finalRestResource = restResource;
+    if (provider === 'workers-ai' && restResource.startsWith('compat/')) {
+        finalRestResource = 'workers-ai/v1/chat/completions';
+    }
+
+    const MAX_RETRIES = 3
     for (let i = 0; i < MAX_RETRIES; i++) {
         if (activeKeys.length === 0) {
             return new Response('No active keys available', { status: 503 })
@@ -112,41 +166,33 @@ async function forward(
         const reqToGateway = await makeGatewayRequest(
             request.method,
             request.headers,
-            body,
+            finalBody,
             env,
-            restResource,
-            selectedKey.key
+            finalRestResource,
+            selectedKey.key,
+            selectedKey.accountId
         )
         const respFromGateway = await fetch(reqToGateway)
         const status = respFromGateway.status
         switch (status) {
-            // try block
             case 400:
                 if (!(await keyIsInvalid(respFromGateway, provider))) {
-                    return respFromGateway // user error
+                    return respFromGateway
                 }
-
-            // key is invalid, then continue to block and next key
             case 401:
             case 403:
                 ctx.waitUntil(keyService.setKeyStatus(env, provider, selectedKey.id, 'blocked'))
-
-                // next key
                 console.error(
                     `key ${selectedKey.key} is blocked due to ${respFromGateway.status} ${await respFromGateway.text()}`
                 )
                 if (activeKeys.length < 500) {
-                    // save the CPU time for Cloudflare Free plan
                     activeKeys.splice(activeKeys.indexOf(selectedKey), 1)
                 }
                 continue
 
-            // try cooling down
             case 429:
                 const sec = await analyze429CooldownSeconds(env, respFromGateway, provider, selectedKey.key)
                 ctx.waitUntil(keyService.setKeyModelCooldownIfAvailable(env, selectedKey.id, provider, model, sec))
-
-                // next key
                 console.warn(
                     `key ${selectedKey.key} is cooling down for model ${model} due to 429 ${await respFromGateway.text()}`
                 )
@@ -160,7 +206,8 @@ async function forward(
             case 503:
             case 504:
                 console.error(`gateway returned 5xx ${await respFromGateway.text()}`)
-                continue // no backoff, just retry...
+                await new Promise(r => setTimeout(r, 1000))
+                continue
         }
 
         if (status / 100 === 2) {
@@ -176,13 +223,11 @@ async function forward(
 
 function getAuthKey(request: Request, provider: string): string {
     if (provider === 'google-ai-studio') {
-        // try to get auth key from query params
         const key = new URL(request.url).searchParams.get('key')
         if (key) {
             return key
         }
     }
-
     return getAuthKeyFromHeader(request, provider)
 }
 
@@ -192,38 +237,32 @@ function getAuthKeyFromHeader(request: Request, provider: string): string {
     if (!v) {
         return ''
     }
-
     let key = v
     if (h === 'Authorization') {
         key = v.replace(/^Bearer\s+/, '')
     }
-
     return key
 }
 
 async function selectKey(keys: schema.Key[], model: string): Promise<schema.Key> {
-    let selectedKey = tryRandomSelect(keys, model) // fast path
+    let selectedKey = tryRandomSelect(keys, model)
     if (selectedKey) {
         return selectedKey
     }
-
     return selectFromAllKeys(keys, model)
 }
 
 function tryRandomSelect(keys: schema.Key[], model: string): schema.Key | null {
     const now = Date.now() / 1000
     const maxAttempts = 10
-
     for (let i = 0; i < maxAttempts; i++) {
         const randomKey = keys[Math.floor(Math.random() * keys.length)]
         const coolingEnd = randomKey.modelCoolings?.[model]?.end_at
-
         if (!coolingEnd || coolingEnd < now) {
             console.info(`selected a key ${randomKey.key} to try; count: ${i + 1}`)
             return randomKey
         }
     }
-
     return null
 }
 
@@ -250,7 +289,23 @@ function selectFromAllKeys(keys: schema.Key[], model: string): schema.Key {
     }
 
     console.warn(`selected a cooling key ${bestCoolingKey?.key} to try`)
-    return bestCoolingKey! // may be available actually
+    return bestCoolingKey!
+}
+
+// Add this helper function at the bottom of api.ts or above makeGatewayRequest
+async function generateStableCacheKey(body: ArrayBuffer | null): Promise<string | null> {
+    if (!body) return null;
+    try {
+        // Decode the body to a string
+        const bodyText = new TextDecoder().decode(body);
+        // Hash it
+        const msgBuffer = new TextEncoder().encode(bodyText);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    } catch {
+        return null;
+    }
 }
 
 async function makeGatewayRequest(
@@ -259,17 +314,42 @@ async function makeGatewayRequest(
     body: ArrayBuffer | null,
     env: Env,
     restResource: string,
-    key: string
+    key: string,
+    accountId?: string
 ): Promise<Request> {
     const newHeaders = new Headers(headers)
+    newHeaders.delete('content-length')
+
     setAuthHeader(newHeaders, restResource, key)
 
-    const selected = selectGateway(env)
-    let base = await env.AI.gateway(selected).getUrl()
-    if (!base.endsWith('/')) {
-        base += '/'
+    // 🚨 CACHE FIX: Set a stable cache key based on the request body
+    if (body) {
+        const cacheKey = await generateStableCacheKey(body);
+        if (cacheKey) {
+            newHeaders.set('cf-aig-cache-key', cacheKey);
+        }
     }
-    const url = `${base}${restResource}`
+
+    let url = ''
+
+    // Bypass AI Gateway for cross-account Workers AI keys
+    if (restResource.startsWith('workers-ai/') && accountId) {
+        url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/v1/chat/completions`
+    } else {
+        if (accountId) {
+            newHeaders.set('cf-account-id', accountId)
+        }
+        if (env.CF_AIG_TOKEN) {
+            newHeaders.set('cf-aig-authorization', `Bearer ${env.CF_AIG_TOKEN}`)
+        }
+
+        const selected = selectGateway(env)
+        let base = await env.AI.gateway(selected).getUrl()
+        if (!base.endsWith('/')) {
+            base += '/'
+        }
+        url = `${base}${restResource}`
+    }
 
     return new Request(url, {
         method: method,
@@ -288,39 +368,30 @@ function selectGateway(env: Env): string {
 
 function setAuthHeader(headers: Headers, restResource: string, key: string) {
     const provider = restResource.split('/')[0]
-
     let v = key
     const h = getAuthHeaderName(provider)
     if (h == 'Authorization') {
         v = `Bearer ${key}`
     }
-
     headers.set(h, v)
 }
 
 async function keyIsInvalid(respFromGateway: Response, provider: string): Promise<boolean> {
     if (provider !== 'google-ai-studio') {
-        return false // TODO: support other providers
+        return false
     }
-
     if (respFromGateway.status !== 400) {
         return false
     }
-
     try {
         const body = await respFromGateway.clone().json()
         const detail = getGoogleAiStudioErrorDetail(body, 'type.googleapis.com/google.rpc.ErrorInfo')
-        return detail?.reason === 'API_KEY_INVALID' // may already deleted.
+        return detail?.reason === 'API_KEY_INVALID'
     } catch {
         return false
     }
 }
 
-// Using an in-memory Map to count consecutive 429s is a design choice to prioritize performance and minimize costs.
-// - Why not use D1 (DB)? To avoid database writes on every 429 error, which would increase load and latency. We only write to the DB when a key needs to be cooled down.
-// - Why not use KV? The free tier has low write quotas. Also, KV's eventual consistency makes it unsuitable for precise, real-time counting.
-// Limitation: This counter is local to each worker instance and not shared globally. If requests for the same key are routed to different instances, the count may be inaccurate.
-// However, for short-lived consecutive requests, Cloudflare often routes them to the same instance, making this a practical trade-off.
 let consecutive429Count: Map<string, number> = new Map()
 
 async function analyze429CooldownSeconds(
@@ -345,10 +416,9 @@ function untilResetForDay(provider: string): number {
     if (provider === 'google-ai-studio') {
         return util.getSecondsUntilMidnightPT()
     }
-    if (provider === 'openrouter') {
+    if (provider === 'openrouter' || provider === 'workers-ai') {
         return util.getSecondsUntilMidnightUTC()
     }
-
     return 24 * 60 * 60
 }
 
@@ -359,7 +429,6 @@ async function untilReset(respFromGateway: Response, provider: string): Promise<
     if (provider === 'openrouter') {
         return untilResetForOpenrouter(respFromGateway)
     }
-
     return 65
 }
 
@@ -374,7 +443,7 @@ async function untilResetForGoogleAiStudio(respFromGateway: Response): Promise<n
             const violations = quotaFailureDetail.violations || []
             for (const violation of violations) {
                 if (violation.quotaId === 'GenerateRequestsPerDayPerProjectPerModel-FreeTier') {
-                    return util.getSecondsUntilMidnightPT() // Requests per day (RPD) quotas reset at midnight Pacific time
+                    return util.getSecondsUntilMidnightPT()
                 }
             }
         }
@@ -382,7 +451,7 @@ async function untilResetForGoogleAiStudio(respFromGateway: Response): Promise<n
         const retryInfoDetail = getGoogleAiStudioErrorDetail(errorBody, 'type.googleapis.com/google.rpc.RetryInfo')
         if (retryInfoDetail && retryInfoDetail.retryDelay) {
             const retrySeconds = parseInt(retryInfoDetail.retryDelay.replace('s', ''))
-            return retrySeconds + 2 // 2 seconds buffer
+            return retrySeconds + 2
         }
     } catch (error) {
         console.error('failed to parse google-ai-studio 429 response, fallback to 65 seconds', error)
@@ -412,13 +481,11 @@ function getGoogleAiStudioErrorDetail(body: any, type: string): any | null {
     if (Array.isArray(body) && body.length > 0) {
         errorBody = body[0]
     }
-
     const details = errorBody.error?.details || []
     for (const detail of details) {
         if (detail['@type'] === type) {
             return detail
         }
     }
-
     return null
 }

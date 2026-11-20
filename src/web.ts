@@ -3,24 +3,107 @@ import * as util from './util'
 import type * as schema from './service/d1/schema'
 
 const PROVIDER_CONFIGS = {
-    'google-ai-studio': { color: 'from-red-400 to-yellow-400', icon: 'G', bgColor: 'from-red-50 to-yellow-50' },
-    'google-vertex-ai': { color: 'from-blue-400 to-green-400', icon: '▲', bgColor: 'from-blue-50 to-green-50' },
-    anthropic: { color: 'from-orange-400 to-red-400', icon: 'A', bgColor: 'from-orange-50 to-red-50' },
-    'azure-openai': { color: 'from-blue-500 to-cyan-400', icon: '⊞', bgColor: 'from-blue-50 to-cyan-50' },
-    'aws-bedrock': { color: 'from-yellow-500 to-orange-500', icon: '◆', bgColor: 'from-yellow-50 to-orange-50' },
-    cartesia: { color: 'from-purple-400 to-pink-400', icon: 'C', bgColor: 'from-purple-50 to-pink-50' },
-    cerebras: { color: 'from-gray-600 to-gray-800', icon: '◉', bgColor: 'from-gray-50 to-gray-100' },
-    cohere: { color: 'from-green-400 to-teal-500', icon: '●', bgColor: 'from-green-50 to-teal-50' },
-    deepseek: { color: 'from-indigo-500 to-purple-600', icon: '◈', bgColor: 'from-indigo-50 to-purple-50' },
-    elevenlabs: { color: 'from-pink-400 to-rose-500', icon: '♫', bgColor: 'from-pink-50 to-rose-50' },
-    grok: { color: 'from-gray-700 to-black', icon: 'X', bgColor: 'from-gray-50 to-gray-100' },
-    groq: { color: 'from-orange-500 to-red-600', icon: '⚡', bgColor: 'from-orange-50 to-red-50' },
-    huggingface: { color: 'from-yellow-400 to-amber-500', icon: '🤗', bgColor: 'from-yellow-50 to-amber-50' },
-    mistral: { color: 'from-blue-600 to-indigo-700', icon: 'M', bgColor: 'from-blue-50 to-indigo-50' },
-    openai: { color: 'from-emerald-400 to-teal-600', icon: '◯', bgColor: 'from-emerald-50 to-teal-50' },
-    openrouter: { color: 'from-violet-500 to-purple-600', icon: '⟲', bgColor: 'from-violet-50 to-purple-50' },
-    'perplexity-ai': { color: 'from-cyan-500 to-blue-600', icon: '?', bgColor: 'from-cyan-50 to-blue-50' },
-    replicate: { color: 'from-slate-500 to-gray-600', icon: '⧉', bgColor: 'from-slate-50 to-gray-50' }
+    'google-ai-studio': {
+        color: 'from-blue-500 to-indigo-600',
+        bgColor: 'from-blue-50 to-indigo-50',
+        iconUrl: 'https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/ai-studio-google/default.svg'
+    },
+    'google-vertex-ai': {
+        color: 'from-blue-600 to-cyan-500',
+        bgColor: 'from-blue-50 to-cyan-50',
+        iconUrl: 'https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/google-vertex-ai/default.svg'
+    },
+    anthropic: {
+        color: 'from-orange-500 to-amber-600',
+        bgColor: 'from-orange-50 to-amber-50',
+        iconUrl: 'https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/anthropic/default.svg'
+    },
+    'azure-openai': {
+        color: 'from-blue-500 to-cyan-600',
+        bgColor: 'from-blue-50 to-cyan-50',
+        iconUrl: 'https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/azure-azure-openai/default.svg'
+    },
+    'aws-bedrock': {
+        color: 'from-orange-500 to-yellow-500',
+        bgColor: 'from-orange-50 to-yellow-50',
+        iconUrl: 'https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/bedrock-aws/default.svg'
+    },
+    cartesia: {
+        color: 'from-purple-500 to-pink-500',
+        bgColor: 'from-purple-50 to-pink-50',
+        iconUrl: 'https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/cartesia/default.svg'
+    },
+    cerebras: {
+        color: 'from-red-500 to-orange-500',
+        bgColor: 'from-red-50 to-orange-50',
+        iconUrl: 'https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/cerebras/default.svg'
+    },
+    cohere: {
+        color: 'from-green-500 to-emerald-600',
+        bgColor: 'from-green-50 to-emerald-50',
+        iconUrl: 'https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/cohere/default.svg'
+    },
+    deepseek: {
+        color: 'from-indigo-500 to-blue-600',
+        bgColor: 'from-indigo-50 to-blue-50',
+        iconUrl: 'https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/deepseek/default.svg'
+    },
+    elevenlabs: {
+        color: 'from-pink-500 to-rose-600',
+        bgColor: 'from-pink-50 to-rose-50',
+        iconUrl: 'https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/elevenlabs/default.svg'
+    },
+    grok: {
+        color: 'from-slate-700 to-gray-900',
+        bgColor: 'from-slate-50 to-gray-50',
+        iconUrl: 'https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/grok/default.svg'
+    },
+    groq: {
+        color: 'from-orange-500 to-red-500',
+        bgColor: 'from-orange-50 to-red-50',
+        iconUrl: 'https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/groq/default.svg'
+    },
+    huggingface: {
+        color: 'from-yellow-500 to-amber-500',
+        bgColor: 'from-yellow-50 to-amber-50',
+        iconUrl: 'https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/huggingface/default.svg'
+    },
+    mistral: {
+        color: 'from-blue-500 to-indigo-500',
+        bgColor: 'from-blue-50 to-indigo-50',
+        iconUrl: 'https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/mistral/default.svg'
+    },
+    openai: {
+        color: 'from-emerald-500 to-teal-600',
+        bgColor: 'from-emerald-50 to-teal-50',
+        iconUrl: 'https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/openai/default.svg'
+    },
+    openrouter: {
+        color: 'from-purple-500 to-violet-600',
+        bgColor: 'from-purple-50 to-violet-50',
+        iconUrl: 'https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/openrouter/default.svg'
+    },
+    'perplexity-ai': {
+        color: 'from-cyan-500 to-blue-500',
+        bgColor: 'from-cyan-50 to-blue-50',
+        iconUrl: 'https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/perplexity/default.svg'
+    },
+    replicate: {
+        color: 'from-gray-700 to-slate-900',
+        bgColor: 'from-gray-50 to-slate-50',
+        iconUrl: 'https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/replicate/default.svg'
+    },
+    // --- New Providers ---
+    nvidia: {
+        color: 'from-green-500 to-emerald-600',
+        bgColor: 'from-green-50 to-emerald-50',
+        iconUrl: 'https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/nvidia-badge/default.svg'
+    },
+    'workers-ai': {
+        color: 'from-orange-400 to-yellow-500',
+        bgColor: 'from-orange-50 to-yellow-50',
+        iconUrl: 'https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/cloudflare/default.svg'
+    }
 } as const
 
 const PROVIDERS = Object.keys(PROVIDER_CONFIGS)
@@ -110,14 +193,22 @@ async function handleKeysPost(
     if (action === 'add') {
         const keysStr = formData.get('keys') as string
         const remark = formData.get('remark') as string
+        const accountId = formData.get('account_id') as string // <-- Add this
         const keys = keysStr
             .split(/[\n,]/)
             .map(k => k.trim())
             .filter(Boolean)
         await keyService.addKeys(
             env,
-            keys.map(key => ({ key, provider: params.provider, remark }))
+            keys.map(key => ({ key, provider: params.provider, remark, accountId }))
         )
+    } else if (action === 'unblock') {
+        const keyIds = formData.getAll('key_id') as string[]
+        if (keyIds.length > 0) {
+            await keyService.updateKeysStatus(env, keyIds, 'active')
+        }
+    } else if (action === 'unblock-all-blocked') {
+        await keyService.updateKeysStatusByStatus(env, params.provider, 'blocked', 'active')
     } else if (action === 'delete') {
         const keyIds = formData.getAll('key_id') as string[]
         await keyService.delKeys(env, keyIds)
@@ -187,47 +278,47 @@ function layout(content: string): string {
                 -webkit-font-smoothing: antialiased;
                 -moz-osx-font-smoothing: grayscale;
             }
-            
+
             .breathing-bg {
                 background: linear-gradient(-45deg, #f8fafc, #e2e8f0, #cbd5e1, #f1f5f9);
                 background-size: 400% 400%;
                 animation: breathe 8s ease-in-out infinite;
             }
-            
+
             @keyframes breathe {
                 0%, 100% { background-position: 0% 50%; }
                 50% { background-position: 100% 50%; }
             }
-            
+
             .glass-card {
                 backdrop-filter: blur(24px);
                 -webkit-backdrop-filter: blur(24px);
                 background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.6) 100%);
                 border: 1px solid rgba(255, 255, 255, 0.4);
-                box-shadow: 
+                box-shadow:
                     0 8px 32px rgba(0, 0, 0, 0.08),
                     0 4px 16px rgba(0, 0, 0, 0.04),
                     inset 0 1px 0 rgba(255, 255, 255, 0.6);
                 transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             }
-            
+
             .glass-card:hover {
                 transform: translateY(-4px) scale(1.01);
-                box-shadow: 
+                box-shadow:
                     0 20px 60px rgba(0, 0, 0, 0.12),
                     0 8px 24px rgba(0, 0, 0, 0.08),
                     inset 0 1px 0 rgba(255, 255, 255, 0.8);
             }
-            
+
             .glass-card-warm {
                 background: linear-gradient(135deg, rgba(254, 249, 239, 0.9) 0%, rgba(255, 251, 235, 0.7) 100%);
                 border: 1px solid rgba(251, 191, 36, 0.2);
-                box-shadow: 
+                box-shadow:
                     0 8px 32px rgba(251, 191, 36, 0.08),
                     0 4px 16px rgba(251, 191, 36, 0.04),
                     inset 0 1px 0 rgba(255, 255, 255, 0.8);
             }
-            
+
             .btn-primary {
                 background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 50%, #2563eb 100%);
                 box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
@@ -235,7 +326,7 @@ function layout(content: string): string {
                 position: relative;
                 overflow: hidden;
             }
-            
+
             .btn-primary::before {
                 content: '';
                 position: absolute;
@@ -246,17 +337,17 @@ function layout(content: string): string {
                 background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
                 transition: left 0.5s;
             }
-            
+
             .btn-primary:hover::before {
                 left: 100%;
             }
-            
+
             .btn-primary:hover {
                 background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 50%, #1e40af 100%);
                 transform: translateY(-2px);
                 box-shadow: 0 12px 32px rgba(59, 130, 246, 0.4);
             }
-            
+
             .input-field {
                 backdrop-filter: blur(12px);
                 -webkit-backdrop-filter: blur(12px);
@@ -265,29 +356,29 @@ function layout(content: string): string {
                 box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
                 transition: all 0.3s ease;
             }
-            
+
             .input-field:focus {
                 background: rgba(255, 255, 255, 0.95);
                 border-color: #3b82f6;
-                box-shadow: 
+                box-shadow:
                     0 0 0 3px rgba(59, 130, 246, 0.1),
                     inset 0 2px 4px rgba(0, 0, 0, 0.02),
                     0 4px 12px rgba(59, 130, 246, 0.1);
             }
-            
+
             .floating-element {
                 animation: float 6s ease-in-out infinite;
             }
-            
+
             @keyframes float {
                 0%, 100% { transform: translateY(0px); }
                 50% { transform: translateY(-10px); }
             }
-            
+
             .pulse-glow {
                 animation: pulse-glow 3s ease-in-out infinite;
             }
-            
+
             @keyframes pulse-glow {
                 0%, 100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.1); }
                 50% { box-shadow: 0 0 40px rgba(59, 130, 246, 0.2); }
@@ -296,7 +387,7 @@ function layout(content: string): string {
             .copy-success {
                 animation: copy-flash 0.6s ease-out;
             }
-            
+
             @keyframes copy-flash {
                 0% { background-color: rgba(34, 197, 94, 0.1); }
                 50% { background-color: rgba(34, 197, 94, 0.2); }
@@ -308,11 +399,11 @@ function layout(content: string): string {
                 navigator.clipboard.writeText(text).then(function() {
                     const tooltip = element.parentElement.querySelector('.copy-tooltip');
                     const originalBg = element.className;
-                    
+
                     element.className = originalBg.replace('bg-gray-100', 'bg-green-100').replace('border-gray-200', 'border-green-300');
                     tooltip.classList.remove('opacity-0');
                     tooltip.classList.add('opacity-100');
-                    
+
                     setTimeout(function() {
                         element.className = originalBg;
                         tooltip.classList.remove('opacity-100');
@@ -350,7 +441,7 @@ function loginPage(): string {
     <div class="flex items-center justify-center min-h-[70vh] relative">
         <div class="absolute top-20 left-1/4 w-32 h-32 bg-blue-200/30 rounded-full blur-3xl floating-element"></div>
         <div class="absolute bottom-20 right-1/4 w-40 h-40 bg-amber-200/30 rounded-full blur-3xl floating-element" style="animation-delay: -3s;"></div>
-        
+
         <div class="max-w-md w-full mx-6 relative z-10">
             <div class="text-center mb-16">
                 <div class="pulse-glow inline-block p-6 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-3xl mb-6">
@@ -359,13 +450,13 @@ function loginPage(): string {
                 <h2 class="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-3">One Balance</h2>
                 <p class="text-gray-600 text-lg">Manage your API keys with perfect balance</p>
             </div>
-            
+
             <div class="glass-card-warm rounded-3xl p-10 transition-all duration-500 hover:scale-[1.02]">
                 <form action="/login" method="POST" class="space-y-8">
                     <div>
                         <label for="auth_key" class="block text-gray-800 text-sm font-bold mb-4 tracking-wide">Authentication Key</label>
-                        <input type="password" id="auth_key" name="auth_key" 
-                               class="input-field w-full px-5 py-4 rounded-2xl text-gray-900 placeholder-gray-500 focus:outline-none text-base font-medium" 
+                        <input type="password" id="auth_key" name="auth_key"
+                               class="input-field w-full px-5 py-4 rounded-2xl text-gray-900 placeholder-gray-500 focus:outline-none text-base font-medium"
                                placeholder="Enter your auth key" required>
                     </div>
                     <button type="submit" class="btn-primary w-full py-4 px-6 text-white font-bold rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-200 text-base tracking-wide">
@@ -388,10 +479,8 @@ function providersPage(): string {
                     <div class="flex items-center justify-between">
                         <div class="flex items-center space-x-5">
                             <div class="relative">
-                                <div class="w-14 h-14 bg-gradient-to-br ${config.bgColor} rounded-2xl flex items-center justify-center group-hover:scale-110 transition-all duration-300 shadow-lg">
-                                    <div class="w-8 h-8 bg-gradient-to-br ${config.color} rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-inner">
-                                        ${config.icon}
-                                    </div>
+                                <div class="w-14 h-14 bg-gradient-to-br ${config.bgColor} rounded-2xl flex items-center justify-center group-hover:scale-110 transition-all duration-300 shadow-lg p-2 border border-white/50">
+                                    <img src="${config.iconUrl}" alt="${p} logo" class="w-full h-full object-contain drop-shadow-sm" loading="lazy" />
                                 </div>
                                 <div class="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-br ${config.color} rounded-full opacity-60 group-hover:opacity-100 transition-opacity duration-300"></div>
                             </div>
@@ -416,7 +505,7 @@ function providersPage(): string {
             <div class="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-8 w-64 h-32 bg-gradient-to-r from-blue-200/20 to-purple-200/20 rounded-full blur-3xl"></div>
             <h1 class="text-6xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-gray-900 bg-clip-text text-transparent mb-6 relative">Select Provider</h1>
         </div>
-        
+
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 max-w-7xl mx-auto">
             ${providerLinks}
         </div>
@@ -530,7 +619,7 @@ function buildKeyRows(keys: schema.Key[]): string {
             return `
             <tr class="group hover:bg-blue-100/60 even:bg-slate-100/40 odd:bg-white/60 transition-all duration-300 hover:shadow-md backdrop-blur-sm border-b border-gray-300/50">
                 <td class="p-4">
-                    <input type="checkbox" name="key_id" value="${k.id}" 
+                    <input type="checkbox" name="key_id" value="${k.id}"
                            class="h-4 w-4 text-blue-600 bg-white border-gray-500 rounded focus:ring-blue-500 focus:ring-2 transition-colors backdrop-blur-sm">
                 </td>
                 <td class="p-4">
@@ -538,7 +627,7 @@ function buildKeyRows(keys: schema.Key[]): string {
                 </td>
                 <td class="p-4 text-sm text-slate-700 font-medium">${k.remark || ''}</td>
                 <td class="p-4">
-                    <span class="text-sm text-slate-800 cursor-pointer hover:text-blue-700 transition-colors duration-200 font-medium px-2 py-1 rounded-md hover:bg-blue-100/80 backdrop-blur-sm" 
+                    <span class="text-sm text-slate-800 cursor-pointer hover:text-blue-700 transition-colors duration-200 font-medium px-2 py-1 rounded-md hover:bg-blue-100/80 backdrop-blur-sm"
                           onclick="showModelCoolings('${modelCoolingsJson}', '${k.key.substring(0, 20)}...')"
                           title="Click to view model cooling details">${totalCoolingTime}</span>
                 </td>
@@ -659,7 +748,7 @@ function buildPaginationButton(
         'bg-white text-gray-800 hover:bg-gray-50 border border-gray-300 hover:border-gray-400 shadow-sm'
 
     return `
-        <a href="${disabled ? '#' : link}" 
+        <a href="${disabled ? '#' : link}"
                 class="${baseClasses} ${disabled ? disabledClasses : enabledClasses}">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 ${icon}
@@ -691,7 +780,7 @@ function buildPageNumberButton(
         'bg-white text-gray-800 hover:bg-gray-50 border border-gray-300 hover:border-gray-400 shadow-sm'
 
     return `
-        <a href="${isCurrent ? '#' : link}" 
+        <a href="${isCurrent ? '#' : link}"
                 class="${baseClasses} ${isCurrent ? currentClasses : otherClasses}">
             ${pageItem}
         </a>
@@ -722,9 +811,10 @@ function buildPageLink(
     return `/keys/${provider}?${params.toString()}`
 }
 
-function formatUsedTime(createdAt: Date): string {
+function formatUsedTime(createdAt: Date | string): string {
+    const date = new Date(createdAt)
     const now = Date.now() / 1000
-    const usedSeconds = now - createdAt.getTime() / 1000
+    const usedSeconds = now - date.getTime() / 1000
     const days = Math.floor(usedSeconds / 86400)
     const hours = Math.floor((usedSeconds % 86400) / 3600)
     const minutes = Math.floor((usedSeconds % 3600) / 60)
@@ -762,24 +852,40 @@ function buildTableHeader(
     sortBy: string,
     sortOrder: string
 ): string {
-    const deleteAllButton =
-        currentStatus === 'blocked'
-            ? `
-        <button type="submit" name="action" value="delete-all-blocked"
-                onclick="return confirm('Are you sure you want to delete ALL blocked keys? This action cannot be undone.')"
-                class="px-4 py-2.5 bg-red-800 hover:bg-red-900 text-white font-semibold rounded-xl text-sm transition-all duration-200 hover:shadow-lg hover:shadow-red-800/25 hover:-translate-y-0.5 border border-red-800">
-            Delete ALL Blocked
+    const isBlocked = currentStatus === 'blocked'
+
+    const bulkActionButton = isBlocked
+        ? `
+        <button type="submit" name="action" value="unblock-all-blocked"
+                class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm transition-all duration-200 hover:shadow-lg hover:shadow-blue-600/25 hover:-translate-y-0.5 border border-blue-600">
+            Unblock ALL Blocked
         </button>
     `
-            : currentStatus === 'active'
-              ? `
+        : `
         <button type="submit" name="action" value="delete-all-active"
                 onclick="return confirm('Are you sure you want to delete ALL active keys? This action cannot be undone.')"
                 class="px-4 py-2.5 bg-red-800 hover:bg-red-900 text-white font-semibold rounded-xl text-sm transition-all duration-200 hover:shadow-lg hover:shadow-red-800/25 hover:-translate-y-0.5 border border-red-800">
             Delete ALL Active
         </button>
     `
-              : ''
+
+    const selectedActionButton = isBlocked
+        ? `
+        <button type="submit" name="action" value="unblock"
+                class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm transition-all duration-200 hover:shadow-lg hover:shadow-blue-600/25 hover:-translate-y-0.5 border border-blue-600">
+            Unblock Selected
+        </button>
+        <button type="submit" name="action" value="delete"
+                class="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl text-sm transition-all duration-200 hover:shadow-lg hover:shadow-red-600/25 hover:-translate-y-0.5 border border-red-600">
+            Delete Selected
+        </button>
+    `
+        : `
+        <button type="submit" name="action" value="delete"
+                class="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl text-sm transition-all duration-200 hover:shadow-lg hover:shadow-red-600/25 hover:-translate-y-0.5 border border-red-600">
+            Delete Selected
+        </button>
+    `
 
     return `
         <div class="p-6 border-b border-gray-200/60 bg-white/30 backdrop-blur-sm">
@@ -791,18 +897,15 @@ function buildTableHeader(
                             <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                             </svg>
-                            <input form="search-form" type="search" name="q" value="${q}" 
-                                   placeholder="Search keys..." 
+                            <input form="search-form" type="search" name="q" value="${q}"
+                                   placeholder="Search keys..."
                                    class="input-field w-64 pl-10 pr-4 py-2.5 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none text-sm shadow-sm">
                         </div>
                     </div>
                 </div>
-                <div class="flex items-center gap-2">
-                    <button type="submit" name="action" value="delete" 
-                            class="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl text-sm transition-all duration-200 hover:shadow-lg hover:shadow-red-600/25 hover:-translate-y-0.5 border border-red-600">
-                        Delete Selected
-                    </button>
-                    ${deleteAllButton}
+                <div class="flex items-center gap-2 flex-wrap">
+                    ${selectedActionButton}
+                    ${bulkActionButton}
                 </div>
             </div>
         </div>
@@ -860,8 +963,8 @@ function buildTableContent(
                 <thead>
                     <tr class="bg-gradient-to-r from-slate-100/90 to-gray-100/90 border-b border-gray-400/80 backdrop-blur-sm">
                         <th class="p-4 text-left">
-                            <input type="checkbox" 
-                                   onchange="document.querySelectorAll('[name=key_id]').forEach(c => c.checked = this.checked)" 
+                            <input type="checkbox"
+                                   onchange="document.querySelectorAll('[name=key_id]').forEach(c => c.checked = this.checked)"
                                    class="h-4 w-4 text-blue-600 bg-white border-gray-500 rounded focus:ring-blue-500 transition-colors backdrop-blur-sm">
                         </th>
                         <th class="p-4 text-left font-semibold text-slate-800 text-sm tracking-wide">API Key</th>
@@ -944,22 +1047,35 @@ function buildAddKeysForm(
             </div>
             <form method="POST">
                 <input type="hidden" name="action" value="add">
+
+                <!-- 1. Restored API Keys Textarea -->
                 <div class="mb-6">
                     <label class="block text-gray-800 text-sm font-semibold mb-3">API Keys</label>
-                    <textarea name="keys" 
-                              class="input-field w-full p-4 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none font-mono text-sm resize-none shadow-sm" 
-                              rows="4" 
+                    <textarea name="keys"
+                              class="input-field w-full p-4 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none font-mono text-sm resize-none shadow-sm"
+                              rows="4"
                               placeholder="Enter API keys, one per line or separated by commas"></textarea>
                 </div>
+
+                <!-- 2. Account ID -->
+                <div class="mb-6">
+                    <label class="block text-gray-800 text-sm font-semibold mb-3">Account ID (Optional for Workers AI)</label>
+                    <input name="account_id"
+                              class="input-field w-full p-4 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none text-sm shadow-sm"
+                              placeholder="e.g., b1c654771e27c8bd47252c1fbc242a62"/>
+                </div>
+
+                <!-- 3. Remark -->
                 <div class="mb-6">
                     <label class="block text-gray-800 text-sm font-semibold mb-3">Remark</label>
                     <input name="remark"
                               class="input-field w-full p-4 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none text-sm shadow-sm"
                               placeholder="Enter remark for these keys (optional)"/>
                 </div>
+
                 <div class="flex justify-end">
-                    <button type="submit" 
-                            formaction="/keys/${provider}${buildPageLink(provider, currentStatus, q, page, 20, sortBy, sortOrder)}" 
+                    <button type="submit"
+                            formaction="/keys/${provider}${buildPageLink(provider, currentStatus, q, page, 20, sortBy, sortOrder)}"
                             class="btn-primary px-6 py-3 text-white font-semibold rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-200">
                         Add Keys
                     </button>
@@ -999,13 +1115,13 @@ function buildModalScript(): string {
                 const modalKeyName = document.getElementById('modalKeyName');
                 const modalTable = document.getElementById('modelCoolingsTable');
                 const modal = document.getElementById('modelCoolingsModal');
-                
+
                 modalKeyName.textContent = keyName;
-                
+
                 try {
                     const modelCoolings = JSON.parse(modelCoolingsJson);
                     const now = Date.now() / 1000;
-                    
+
                     if (Object.keys(modelCoolings).length === 0) {
                         modalTable.innerHTML = '<p class="text-gray-600 text-center py-8">No model cooling data available</p>';
                     } else {
@@ -1015,7 +1131,7 @@ function buildModalScript(): string {
                             const totalTime = formatTime(cooling.total_seconds);
                             const statusClass = isAvailable ? 'text-green-600 bg-green-50' : 'text-red-600 bg-red-50';
                             const status = isAvailable ? 'available' : 'cooling';
-                            
+
                             return \`
                                 <tr class="border-b border-gray-200">
                                     <td class="p-3 font-mono text-sm">\${model}</td>
@@ -1027,7 +1143,7 @@ function buildModalScript(): string {
                                 </tr>
                             \`;
                         }).join('');
-                        
+
                         modalTable.innerHTML = \`
                             <table class="w-full">
                                 <thead>
@@ -1047,11 +1163,11 @@ function buildModalScript(): string {
                 } catch (e) {
                     modalTable.innerHTML = '<p class="text-red-600 text-center py-8">Error parsing model cooling data</p>';
                 }
-                
+
                 modal.classList.remove('hidden');
                 modal.classList.add('flex');
             }
-            
+
             function closeModal(event) {
                 if (!event || event.target === event.currentTarget) {
                     const modal = document.getElementById('modelCoolingsModal');
@@ -1059,14 +1175,14 @@ function buildModalScript(): string {
                     modal.classList.remove('flex');
                 }
             }
-            
+
             function formatTime(seconds) {
                 if (seconds <= 0) return '-';
-                
+
                 const days = Math.floor(seconds / 86400);
                 const hours = Math.floor((seconds % 86400) / 3600);
                 const minutes = Math.floor((seconds % 3600) / 60);
-                
+
                 if (days > 0) {
                     return \`\${days}d\${hours}h\`;
                 }
