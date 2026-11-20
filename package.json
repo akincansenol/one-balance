@@ -9,14 +9,14 @@
         "migrate": "drizzle-kit generate && wrangler d1 migrations apply one-balance --local",
         "init:config": "node -e \"require('fs').copyFileSync('wrangler.jsonc.tpl', 'wrangler.jsonc')\""
     },
-    "packageManager": "pnpm@10.12.2+sha512.a32540185b964ee30bb4e979e405adc6af59226b438ee4cc19f9e8773667a66d302f5bfee60a39d3cac69e35e4b96e708a71dd002b7e9359c4112a1722ac323f",
+    "packageManager": "pnpm@12.18.0",
     "devDependencies": {
-        "drizzle-kit": "^0.31.2",
-        "prettier": "^3.6.2",
-        "typescript": "^5.5.2",
-        "wrangler": "^4.21.0"
+        "drizzle-kit": "^0.31.11",
+        "prettier": "^3.9.10",
+        "typescript": "^7.0.2",
+        "wrangler": "4.160.0"
     },
     "dependencies": {
-        "drizzle-orm": "^0.44.2"
+        "drizzle-orm": "^0.45.4"
     }
 }
