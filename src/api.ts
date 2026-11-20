@@ -319,7 +319,7 @@ async function makeGatewayRequest(
 ): Promise<Request> {
     const newHeaders = new Headers(headers)
     newHeaders.delete('content-length')
-
+    stripClientIpHeaders(newHeaders)
     setAuthHeader(newHeaders, restResource, key)
 
     // 🚨 CACHE FIX: Set a stable cache key based on the request body
@@ -357,6 +357,25 @@ async function makeGatewayRequest(
         body: body,
         redirect: 'follow'
     })
+}
+
+function stripClientIpHeaders(headers: Headers) {
+    const clientIpHeaders = [
+        'CF-Connecting-IP',
+        'CF-Connecting-IPv6',
+        'Fastly-Client-IP',
+        'Forwarded',
+        'True-Client-IP',
+        'X-Client-IP',
+        'X-Cluster-Client-IP',
+        'X-Forwarded',
+        'X-Forwarded-For',
+        'X-Real-IP'
+    ]
+
+    for (const header of clientIpHeaders) {
+        headers.delete(header)
+    }
 }
 
 function selectGateway(env: Env): string {
