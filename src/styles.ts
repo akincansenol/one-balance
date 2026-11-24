@@ -103,16 +103,28 @@ html.dark .provider-icon { background: #1e293b; }
 .provider-name { font-size: 14px; font-weight: 500; flex: 1 1 auto; }
 .provider-chevron { width: 16px; height: 16px; color: var(--muted); flex: 0 0 auto; }
 
-/* ---------- auth ---------- */
-.auth-wrap { min-height: calc(100vh - 200px); display: flex; align-items: center; justify-content: center; padding: 48px 0; }
+/* ---------- auth (Cloudflare Access style) ---------- */
+.guest-corner { position: fixed; top: 16px; right: 20px; z-index: 20; }
+body.auth-body { background: #0b1526; }
+html.dark body.auth-body { background: #070d18; }
+.auth-wrap { min-height: calc(100vh - 80px); display: flex; align-items: center; justify-content: center; padding: 24px 0; }
 .auth-card {
-  width: 100%; max-width: 380px; background: var(--surface);
-  border: 1px solid var(--border); border-radius: 14px; padding: 32px;
+  width: 100%; max-width: 400px; background: var(--surface);
+  border: 1px solid var(--border); border-radius: 12px; padding: 32px;
+  box-shadow: 0 20px 50px rgba(0,0,0,.35);
 }
-.auth-logo { display: flex; justify-content: center; margin-bottom: 28px; }
-.auth-logo img { height: 40px; width: auto; }
+.auth-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+.auth-brand img { height: 24px; width: auto; display: block; }
+.auth-org { font-size: 12px; font-weight: 500; color: var(--muted); }
+.auth-title { font-size: 20px; font-weight: 600; letter-spacing: -.01em; margin: 0 0 20px; color: var(--text); }
 .field-label { display: block; font-size: 13px; font-weight: 500; color: var(--muted); margin-bottom: 8px; }
 .auth-card form { display: flex; flex-direction: column; gap: 16px; }
+.auth-footer {
+  margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--border);
+  font-size: 11.5px; line-height: 1.5; color: var(--muted);
+}
+.auth-footer p { margin: 0 0 6px; }
+.auth-copy { margin: 0 !important; opacity: .8; }
 
 /* ---------- legacy neutralisers ---------- */
 [class*="bg-gradient-to-"] { background-image: none !important; }

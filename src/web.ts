@@ -333,17 +333,10 @@ export function buildHeader(): string {
 }
 
 export function buildGuestHeader(): string {
-  return `
-    <header class="app-header">
-        <div class="app-header-inner">
-            <a href="/" class="brand" aria-label="EPLANI Balance"><img src="${LOGO}" alt="EPLANI"></a>
-            <div class="header-actions">${themeToggleButton()}</div>
-        </div>
-    </header>
-    `;
+  return `<div class="guest-corner">${themeToggleButton()}</div>`;
 }
 
-export function layout(content: string, options: { signOut?: boolean } = {}): string {
+export function layout(content: string, options: { signOut?: boolean; authPage?: boolean } = {}): string {
   return `
     <!DOCTYPE html>
     <html lang="en">
@@ -389,7 +382,7 @@ export function layout(content: string, options: { signOut?: boolean } = {}): st
             }
         <\/script>
     </head>
-    <body>
+    <body class="${options.authPage ? 'auth-body' : ''}">
         ${options.signOut ? buildHeader() : buildGuestHeader()}
         <main class="page">${content}</main>
     </body>
@@ -401,21 +394,27 @@ export function loginPage(csrfToken: string): string {
   const content = `
     <div class="auth-wrap">
         <div class="auth-card">
-            <div class="auth-logo">
+            <div class="auth-brand">
                 <img src="${LOGO}" alt="EPLANI">
+                <span class="auth-org">Creative Technologies</span>
             </div>
+            <h1 class="auth-title">Log in to AI Gateway</h1>
             <form action="/login" method="POST">
                 <input type="hidden" name="csrf_token" value="${csrfToken}">
                 <div>
                     <label for="auth_key" class="field-label">Authentication key</label>
-                    <input type="password" id="auth_key" name="auth_key" autocomplete="current-password" class="input-field" placeholder="Enter your auth key" required>
+                    <input type="password" id="auth_key" name="auth_key" autocomplete="current-password" class="input-field" placeholder="Enter your auth key" required autofocus>
                 </div>
                 <button type="submit" class="btn-primary">Sign in</button>
             </form>
+            <div class="auth-footer">
+                <p>Authorized personnel only. All access attempts are monitored and logged.</p>
+                <p class="auth-copy">© EPLANI A.Ş. · eplani.com.tr</p>
+            </div>
         </div>
     </div>
     `;
-  return layout(content);
+  return layout(content, { authPage: true });
 }
 
 export function providersPage(): string {
