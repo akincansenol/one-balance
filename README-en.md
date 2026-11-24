@@ -29,24 +29,23 @@ If you have multiple API keys with quota limits (e.g., Google AI Studio), `One B
 - Navigate to `AI` -> `AI Gateway`.
 - Create a new AI Gateway and name it **`one-balance`**.
 
-#### 2. One-Click Deploy!
+#### 2. Configure Secrets & Deploy
 
-- Set `AUTH_KEY` as the password to access this service. This key should be complex and secure.
-- Run the deployment command:
+- Copy `.env.example` to `.env` and set your `AUTH_KEY` (never commit `.env`).
+- Remove `AUTH_KEY` from `wrangler.jsonc` `vars` if you manage it as a Cloudflare Secret, then upload secrets once and deploy:
 
 ```bash
-git clone https://github.com/glidea/one-balance.git && cd one-balance && pnpm install
-
-# Mac/Linux
-git clone https://github.com/glidea/one-balance.git
+git clone -b custom-nvidia https://github.com/akincansenol/one-balance.git
 cd one-balance
 pnpm install
 
-# Mac/Linux
+# Initial setup (creates D1 database + applies migrations)
+cp .env.example .env
 AUTH_KEY=your-super-secret-auth-key pnpm run deploycf
 
-# Windows (PowerShell)
-$env:AUTH_KEY = "your-super-secret-auth-key"; pnpm run deploycf
+# Or upload .env as encrypted Cloudflare Secrets (one-time) and deploy seamlessly
+pnpm exec wrangler secret bulk .env
+pnpm exec wrangler deploy
 ```
 
 - The script will guide you to log in to `wrangler` (if you haven't already), automatically create the required D1 database, and deploy the Worker. Upon successful deployment, you will get a Worker URL, for example, `https://one-balance.<your-subdomain>.workers.dev`.
