@@ -12,7 +12,7 @@ const PROVIDER_CONFIGS = {
     'google-vertex-ai': {
         color: 'from-blue-600 to-cyan-500',
         bgColor: 'from-blue-50 to-cyan-50',
-        iconUrl: 'https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/google-vertex-ai/default.svg'
+        iconUrl: 'https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/google-cloud/default.svg'
     },
     anthropic: {
         color: 'from-orange-500 to-amber-600',
@@ -109,6 +109,14 @@ const PROVIDER_CONFIGS = {
 
 const PROVIDERS = Object.keys(PROVIDER_CONFIGS)
 
+function htmlResponse(html: string, extraHeaders?: Headers): Response {
+  const headers = new Headers(extraHeaders);
+  headers.set('Content-Type', 'text/html;charset=UTF-8');
+  headers.set('X-Content-Type-Options', 'nosniff');
+  headers.set('X-Frame-Options', 'DENY');
+  return new Response(html, { headers });
+}
+
 export async function handle(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url)
     const pathname = url.pathname
@@ -155,7 +163,7 @@ async function handleKeys(request: Request, env: Env): Promise<Response> {
 
     const parseResult = parseKeysRequest(request)
     if (!parseResult.provider) {
-        return new Response(providersPage(), { headers: { 'Content-Type': 'text/html;charset=UTF-8' } })
+        return htmlResponse(providersPage())
     }
 
     if (request.method === 'POST') {
@@ -175,7 +183,7 @@ function checkAuth(request: Request, env: Env): Response | null {
             'Cache-Control': 'no-store'
         })
         headers.append('Set-Cookie', `csrf_token=${csrfToken}; Path=/; SameSite=Strict; Secure; Max-Age=600`)
-        return new Response(loginPage(csrfToken), { headers })
+        return htmlResponse(loginPage(csrfToken), headers)
     }
 
     return null
@@ -259,7 +267,7 @@ async function handleKeysGet(env: Env, params: ReturnType<typeof parseKeysReques
         params.sortOrder
     )
 
-    return new Response(
+    return htmlResponse(
         keysListPage(
             params.provider,
             params.status,
@@ -271,9 +279,6 @@ async function handleKeysGet(env: Env, params: ReturnType<typeof parseKeysReques
             params.sortBy,
             params.sortOrder
         ),
-        {
-            headers: { 'Content-Type': 'text/html;charset=UTF-8' }
-        }
     )
 }
 
@@ -346,9 +351,7 @@ export function layout(content: string, options: { signOut?: boolean } = {}): st
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta name="color-scheme" content="light dark">
-        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; img-src 'self' data: https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'">
-        <meta http-equiv="X-Content-Type-Options" content="nosniff">
-        <meta http-equiv="X-Frame-Options" content="DENY">
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://static.cloudflareinsights.com; connect-src 'self' https://cloudflareinsights.com; img-src 'self' data: https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'">
         <title>EPLANI Balance</title>
         <link rel="icon" href="${LOGO}">
         <script src="https://cdn.tailwindcss.com"><\/script>
@@ -420,7 +423,7 @@ export function providersPage(): string {
     const config = PROVIDER_CONFIGS[p as keyof typeof PROVIDER_CONFIGS];
     return `
         <a href="/keys/${p}?status=active" class="provider-card">
-            <span class="provider-icon"><img src="${config.iconUrl}" alt="" loading="lazy"></span>
+            <span class="provider-icon"><img src="${config.iconUrl}" alt="" loading="lazy" onerror="this.style.display='none'"></span>
             <span class="provider-name">${p}</span>
             <svg class="provider-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path></svg>
         </a>`;

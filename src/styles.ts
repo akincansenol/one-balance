@@ -95,9 +95,10 @@ html.dark .theme-toggle .icon-sun { display: none; }
 }
 .provider-card:hover { border-color: var(--accent); background: var(--surface-2); }
 .provider-icon {
-  width: 32px; height: 32px; border-radius: 8px; background: var(--surface-2);
+  width: 32px; height: 32px; border-radius: 8px; background: #e4e4e7;
   display: inline-flex; align-items: center; justify-content: center; padding: 5px; flex: 0 0 auto;
 }
+html.dark .provider-icon { background: #1e293b; }
 .provider-icon img { width: 100%; height: 100%; object-fit: contain; }
 .provider-name { font-size: 14px; font-weight: 500; flex: 1 1 auto; }
 .provider-chevron { width: 16px; height: 16px; color: var(--muted); flex: 0 0 auto; }
