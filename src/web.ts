@@ -1,3 +1,4 @@
+import { STYLES } from "./styles"
 import * as keyService from './service/key'
 import * as util from './util'
 import type * as schema from './service/d1/schema'
@@ -116,6 +117,10 @@ export async function handle(request: Request, env: Env, ctx: ExecutionContext):
         return handleLogin(request, env)
     }
 
+    if (pathname === '/logout' && request.method === 'GET') {
+        return handleLogout(request)
+    }
+
     if (pathname.startsWith('/keys') || pathname === '/') {
         return handleKeys(request, env)
     }
@@ -125,11 +130,16 @@ export async function handle(request: Request, env: Env, ctx: ExecutionContext):
 
 async function handleLogin(request: Request, env: Env): Promise<Response> {
     const formData = await request.formData()
+    const submittedToken = formData.get('csrf_token')
+    if (!safeEqual(submittedToken, getCookie(request, 'csrf_token'))) {
+        return new Response('Invalid CSRF token', { status: 403 })
+    }
     const key = formData.get('auth_key') as string
 
     if (util.isWebUiRequestAllowed(key, env.AUTH_KEY)) {
         const headers = new Headers()
-        headers.set('Set-Cookie', `auth_key=${key}; HttpOnly; Path=/; SameSite=Strict; Max-Age=2147483647`)
+        headers.append('Set-Cookie', `auth_key=${key}; HttpOnly; Path=/; SameSite=Strict; Max-Age=2147483647`)
+        headers.append('Set-Cookie', 'csrf_token=; Path=/; SameSite=Strict; Secure; Max-Age=0')
         headers.set('Location', '/keys')
         return new Response(null, { status: 302, headers })
     }
@@ -156,11 +166,16 @@ async function handleKeys(request: Request, env: Env): Promise<Response> {
 }
 
 function checkAuth(request: Request, env: Env): Response | null {
-    const cookie = request.headers.get('Cookie')
-    const authKey = cookie?.match(/auth_key=([^;]+)/)?.[1] as string
+    const authKey = getCookie(request, 'auth_key') || ''
 
     if (!util.isWebUiRequestAllowed(authKey, env.AUTH_KEY)) {
-        return new Response(loginPage(), { headers: { 'Content-Type': 'text/html;charset=UTF-8' } })
+        const csrfToken = generateCsrfToken()
+        const headers = new Headers({
+            'Content-Type': 'text/html;charset=UTF-8',
+            'Cache-Control': 'no-store'
+        })
+        headers.append('Set-Cookie', `csrf_token=${csrfToken}; Path=/; SameSite=Strict; Secure; Max-Age=600`)
+        return new Response(loginPage(csrfToken), { headers })
     }
 
     return null
@@ -262,257 +277,172 @@ async function handleKeysGet(env: Env, params: ReturnType<typeof parseKeysReques
     )
 }
 
-function layout(content: string): string {
-    return `
+const LOGO = "https://cdn.jsdelivr.net/gh/akincansenol/eplani-landing@main/eplani.svg";
+
+export function generateCsrfToken(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+export function getCookie(request: Request, name: string): string | null {
+  const header = request.headers.get("Cookie");
+  if (!header) return null;
+  for (const part of header.split(";")) {
+    const idx = part.indexOf("=");
+    if (idx === -1) continue;
+    if (part.slice(0, idx).trim() === name) return part.slice(idx + 1).trim();
+  }
+  return null;
+}
+
+export function safeEqual(a: unknown, b: unknown): boolean {
+  if (typeof a !== "string" || typeof b !== "string") return false;
+  const enc = new TextEncoder();
+  const x = enc.encode(a);
+  const y = enc.encode(b);
+  if (x.byteLength !== y.byteLength) return false;
+  let diff = 0;
+  for (let i = 0; i < x.byteLength; i++) diff |= x[i] ^ y[i];
+  return diff === 0;
+}
+
+export function themeToggleButton(): string {
+  return `<button type="button" onclick="toggleTheme()" aria-label="Toggle dark mode" title="Toggle dark mode" class="theme-toggle">
+    <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"></circle><path stroke-linecap="round" d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"></path></svg>
+    <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"></path></svg>
+  </button>`;
+}
+
+export function buildHeader(): string {
+  return `
+    <header class="app-header">
+        <div class="app-header-inner">
+            <a href="/" class="brand" aria-label="EPLANI Balance"><img src="${LOGO}" alt="EPLANI"></a>
+            <div class="header-actions">
+                ${themeToggleButton()}
+                <a href="/logout" class="btn btn-ghost">Sign out</a>
+            </div>
+        </div>
+    </header>
+    `;
+}
+
+export function buildGuestHeader(): string {
+  return `
+    <header class="app-header">
+        <div class="app-header-inner">
+            <a href="/" class="brand" aria-label="EPLANI Balance"><img src="${LOGO}" alt="EPLANI"></a>
+            <div class="header-actions">${themeToggleButton()}</div>
+        </div>
+    </header>
+    `;
+}
+
+export function layout(content: string, options: { signOut?: boolean } = {}): string {
+  return `
     <!DOCTYPE html>
     <html lang="en">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>One Balance</title>
-        <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚖️</text></svg>">
-        <script src="https://cdn.tailwindcss.com"></script>
-        <style>
-            body {
-                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-                -webkit-font-smoothing: antialiased;
-                -moz-osx-font-smoothing: grayscale;
-            }
-
-            .breathing-bg {
-                background: linear-gradient(-45deg, #f8fafc, #e2e8f0, #cbd5e1, #f1f5f9);
-                background-size: 400% 400%;
-                animation: breathe 8s ease-in-out infinite;
-            }
-
-            @keyframes breathe {
-                0%, 100% { background-position: 0% 50%; }
-                50% { background-position: 100% 50%; }
-            }
-
-            .glass-card {
-                backdrop-filter: blur(24px);
-                -webkit-backdrop-filter: blur(24px);
-                background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.6) 100%);
-                border: 1px solid rgba(255, 255, 255, 0.4);
-                box-shadow:
-                    0 8px 32px rgba(0, 0, 0, 0.08),
-                    0 4px 16px rgba(0, 0, 0, 0.04),
-                    inset 0 1px 0 rgba(255, 255, 255, 0.6);
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            }
-
-            .glass-card:hover {
-                transform: translateY(-4px) scale(1.01);
-                box-shadow:
-                    0 20px 60px rgba(0, 0, 0, 0.12),
-                    0 8px 24px rgba(0, 0, 0, 0.08),
-                    inset 0 1px 0 rgba(255, 255, 255, 0.8);
-            }
-
-            .glass-card-warm {
-                background: linear-gradient(135deg, rgba(254, 249, 239, 0.9) 0%, rgba(255, 251, 235, 0.7) 100%);
-                border: 1px solid rgba(251, 191, 36, 0.2);
-                box-shadow:
-                    0 8px 32px rgba(251, 191, 36, 0.08),
-                    0 4px 16px rgba(251, 191, 36, 0.04),
-                    inset 0 1px 0 rgba(255, 255, 255, 0.8);
-            }
-
-            .btn-primary {
-                background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 50%, #2563eb 100%);
-                box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                position: relative;
-                overflow: hidden;
-            }
-
-            .btn-primary::before {
-                content: '';
-                position: absolute;
-                top: 0;
-                left: -100%;
-                width: 100%;
-                height: 100%;
-                background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-                transition: left 0.5s;
-            }
-
-            .btn-primary:hover::before {
-                left: 100%;
-            }
-
-            .btn-primary:hover {
-                background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 50%, #1e40af 100%);
-                transform: translateY(-2px);
-                box-shadow: 0 12px 32px rgba(59, 130, 246, 0.4);
-            }
-
-            .input-field {
-                backdrop-filter: blur(12px);
-                -webkit-backdrop-filter: blur(12px);
-                background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(248, 250, 252, 0.6) 100%);
-                border: 1px solid rgba(203, 213, 225, 0.4);
-                box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
-                transition: all 0.3s ease;
-            }
-
-            .input-field:focus {
-                background: rgba(255, 255, 255, 0.95);
-                border-color: #3b82f6;
-                box-shadow:
-                    0 0 0 3px rgba(59, 130, 246, 0.1),
-                    inset 0 2px 4px rgba(0, 0, 0, 0.02),
-                    0 4px 12px rgba(59, 130, 246, 0.1);
-            }
-
-            .floating-element {
-                animation: float 6s ease-in-out infinite;
-            }
-
-            @keyframes float {
-                0%, 100% { transform: translateY(0px); }
-                50% { transform: translateY(-10px); }
-            }
-
-            .pulse-glow {
-                animation: pulse-glow 3s ease-in-out infinite;
-            }
-
-            @keyframes pulse-glow {
-                0%, 100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.1); }
-                50% { box-shadow: 0 0 40px rgba(59, 130, 246, 0.2); }
-            }
-
-            .copy-success {
-                animation: copy-flash 0.6s ease-out;
-            }
-
-            @keyframes copy-flash {
-                0% { background-color: rgba(34, 197, 94, 0.1); }
-                50% { background-color: rgba(34, 197, 94, 0.2); }
-                100% { background-color: transparent; }
-            }
-        </style>
+        <meta name="color-scheme" content="light dark">
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; img-src 'self' data: https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'">
+        <meta http-equiv="X-Content-Type-Options" content="nosniff">
+        <meta http-equiv="X-Frame-Options" content="DENY">
+        <title>EPLANI Balance</title>
+        <link rel="icon" href="${LOGO}">
+        <script src="https://cdn.tailwindcss.com"><\/script>
+        <script>try { tailwind.config = { darkMode: "class" }; } catch (e) {}<\/script>
         <script>
+            (function () {
+                try {
+                    var stored = localStorage.getItem("theme");
+                    var dark = stored ? stored === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+                    if (dark) document.documentElement.classList.add("dark");
+                } catch (e) {}
+            })();
+        <\/script>
+        <style>${STYLES}</style>
+        <script>
+            function toggleTheme() {
+                var dark = document.documentElement.classList.toggle("dark");
+                try { localStorage.setItem("theme", dark ? "dark" : "light"); } catch (e) {}
+            }
             function copyToClipboard(text, element) {
-                navigator.clipboard.writeText(text).then(function() {
+                navigator.clipboard.writeText(text).then(function () {
                     const tooltip = element.parentElement.querySelector('.copy-tooltip');
                     const originalBg = element.className;
-
                     element.className = originalBg.replace('bg-gray-100', 'bg-green-100').replace('border-gray-200', 'border-green-300');
                     tooltip.classList.remove('opacity-0');
                     tooltip.classList.add('opacity-100');
-
-                    setTimeout(function() {
+                    setTimeout(function () {
                         element.className = originalBg;
                         tooltip.classList.remove('opacity-100');
                         tooltip.classList.add('opacity-0');
                     }, 1500);
-                }).catch(function() {
+                }).catch(function () {
                     console.error('Failed to copy text');
                 });
             }
-        </script>
+        <\/script>
     </head>
-    <body class="breathing-bg min-h-screen text-gray-900 flex flex-col">
-        <main class="container mx-auto mt-12 px-6 max-w-7xl flex-grow">
-            ${content}
-        </main>
-        <footer class="text-center py-12 text-sm text-gray-600 space-y-3">
-            <p>
-                <a href="https://github.com/glidea/one-balance" target="_blank" rel="noopener noreferrer" class="hover:text-blue-600 transition-colors duration-300 font-medium">
-                    one-balance on GitHub
-                </a>
-            </p>
-            <p>
-                <a href="https://github.com/glidea/zenfeed" target="_blank" rel="noopener noreferrer" class="hover:text-blue-600 transition-colors duration-300 font-medium">
-                    zenfeed &mdash; Make RSS 📰 great again with AI 🧠✨!!
-                </a>
-            </p>
-        </footer>
+    <body>
+        ${options.signOut ? buildHeader() : buildGuestHeader()}
+        <main class="page">${content}</main>
     </body>
     </html>
-    `
+    `;
 }
 
-function loginPage(): string {
-    const content = `
-    <div class="flex items-center justify-center min-h-[70vh] relative">
-        <div class="absolute top-20 left-1/4 w-32 h-32 bg-blue-200/30 rounded-full blur-3xl floating-element"></div>
-        <div class="absolute bottom-20 right-1/4 w-40 h-40 bg-amber-200/30 rounded-full blur-3xl floating-element" style="animation-delay: -3s;"></div>
-
-        <div class="max-w-md w-full mx-6 relative z-10">
-            <div class="text-center mb-16">
-                <div class="pulse-glow inline-block p-6 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-3xl mb-6">
-                    <h1 class="text-6xl font-bold">⚖️</h1>
+export function loginPage(csrfToken: string): string {
+  const content = `
+    <div class="auth-wrap">
+        <div class="auth-card">
+            <div class="auth-logo">
+                <img src="${LOGO}" alt="EPLANI">
+            </div>
+            <form action="/login" method="POST">
+                <input type="hidden" name="csrf_token" value="${csrfToken}">
+                <div>
+                    <label for="auth_key" class="field-label">Authentication key</label>
+                    <input type="password" id="auth_key" name="auth_key" autocomplete="current-password" class="input-field" placeholder="Enter your auth key" required>
                 </div>
-                <h2 class="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-3">One Balance</h2>
-                <p class="text-gray-600 text-lg">Manage your API keys with perfect balance</p>
-            </div>
-
-            <div class="glass-card-warm rounded-3xl p-10 transition-all duration-500 hover:scale-[1.02]">
-                <form action="/login" method="POST" class="space-y-8">
-                    <div>
-                        <label for="auth_key" class="block text-gray-800 text-sm font-bold mb-4 tracking-wide">Authentication Key</label>
-                        <input type="password" id="auth_key" name="auth_key"
-                               class="input-field w-full px-5 py-4 rounded-2xl text-gray-900 placeholder-gray-500 focus:outline-none text-base font-medium"
-                               placeholder="Enter your auth key" required>
-                    </div>
-                    <button type="submit" class="btn-primary w-full py-4 px-6 text-white font-bold rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-200 text-base tracking-wide">
-                        Sign In
-                    </button>
-                </form>
-            </div>
+                <button type="submit" class="btn-primary">Sign in</button>
+            </form>
         </div>
     </div>
-    `
-    return layout(content)
+    `;
+  return layout(content);
 }
 
-function providersPage(): string {
-    const providerLinks = PROVIDERS.map((p, index) => {
-        const config = PROVIDER_CONFIGS[p as keyof typeof PROVIDER_CONFIGS]
-        return `
-            <div class="glass-card rounded-3xl p-8 transition-all duration-500 hover:cursor-pointer group hover:shadow-2xl" style="animation-delay: ${index * 0.1}s;">
-                <a href="/keys/${p}?status=active" class="block">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center space-x-5">
-                            <div class="relative">
-                                <div class="w-14 h-14 bg-gradient-to-br ${config.bgColor} rounded-2xl flex items-center justify-center group-hover:scale-110 transition-all duration-300 shadow-lg p-2 border border-white/50">
-                                    <img src="${config.iconUrl}" alt="${p} logo" class="w-full h-full object-contain drop-shadow-sm" loading="lazy" />
-                                </div>
-                                <div class="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-br ${config.color} rounded-full opacity-60 group-hover:opacity-100 transition-opacity duration-300"></div>
-                            </div>
-                            <div>
-                                <h3 class="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors duration-300 mb-1">${p}</h3>
-                            </div>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <div class="w-2 h-2 bg-gradient-to-r ${config.color} rounded-full opacity-60 group-hover:opacity-100 transition-opacity duration-300"></div>
-                            <svg class="w-6 h-6 text-gray-400 transform transition-all duration-300 group-hover:translate-x-2 group-hover:text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                            </svg>
-                        </div>
-                    </div>
-                </a>
-            </div>
-        `
-    }).join('')
+export function providersPage(): string {
+  const providerLinks = PROVIDERS.map((p) => {
+    const config = PROVIDER_CONFIGS[p as keyof typeof PROVIDER_CONFIGS];
+    return `
+        <a href="/keys/${p}?status=active" class="provider-card">
+            <span class="provider-icon"><img src="${config.iconUrl}" alt="" loading="lazy"></span>
+            <span class="provider-name">${p}</span>
+            <svg class="provider-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path></svg>
+        </a>`;
+  }).join("");
 
-    const content = `
-        <div class="text-center mb-20 relative">
-            <div class="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-8 w-64 h-32 bg-gradient-to-r from-blue-200/20 to-purple-200/20 rounded-full blur-3xl"></div>
-            <h1 class="text-6xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-gray-900 bg-clip-text text-transparent mb-6 relative">Select Provider</h1>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 max-w-7xl mx-auto">
-            ${providerLinks}
-        </div>
-    `
-    return layout(content)
+  const content = `
+    <div class="page-head">
+        <h1 class="page-title">Providers</h1>
+        <p class="page-sub">Choose a provider to manage its API keys.</p>
+    </div>
+    <div class="provider-grid">${providerLinks}</div>
+    `;
+  return layout(content, { signOut: true });
 }
 
+export function handleLogout(_request: Request): Response {
+  const headers = new Headers();
+  headers.append("Set-Cookie", "auth_key=; HttpOnly; Path=/; SameSite=Strict; Max-Age=0");
+  headers.append("Set-Cookie", "csrf_token=; Path=/; SameSite=Strict; Secure; Max-Age=0");
+  headers.set("Location", "/");
+  return new Response(null, { status: 302, headers });
+}
 function keysListPage(
     provider: string,
     currentStatus: string,
