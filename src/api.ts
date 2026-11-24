@@ -20,7 +20,8 @@ export async function handle(request: Request, env: Env, ctx: ExecutionContext):
 
     const provider = restResource.split('/')[0]
     const authKey = getAuthKey(request, provider)
-    const realProviderAndModel = await extractRealProviderAndModel(request, restResource, provider)
+    const bodyBytes = request.method === 'POST' && request.body ? await request.arrayBuffer() : null
+    const realProviderAndModel = await extractRealProviderAndModel(bodyBytes, restResource, provider)
     if (!realProviderAndModel) {
         return new Response('Not supported request: valid provider or model not found', { status: 400 })
     }
@@ -29,15 +30,15 @@ export async function handle(request: Request, env: Env, ctx: ExecutionContext):
         return new Response('Invalid auth key', { status: 403 })
     }
 
-    return await forward(request, env, ctx, restResource, realProviderAndModel.provider, realProviderAndModel.model)
+    return await forward(request, bodyBytes, env, ctx, restResource, realProviderAndModel.provider, realProviderAndModel.model)
 }
 
 async function extractRealProviderAndModel(
-    request: Request,
+    bodyBytes: ArrayBuffer | null,
     restResource: string,
     provider: string
 ): Promise<{ provider: string; model: string } | null> {
-    const model = await extractModel(request, restResource)
+    const model = await extractModel(bodyBytes, restResource)
     if (!model) {
         return null
     }
@@ -77,19 +78,29 @@ async function extractRealProviderAndModel(
     return { provider, model }
 }
 
-async function extractModel(request: Request, restResource: string): Promise<string | null> {
-    if (request.method === 'POST' && request.body) {
-        const model = await extractModelFromBody(request)
+async function extractModel(bodyBytes: ArrayBuffer | null, restResource: string): Promise<string | null> {
+    if (bodyBytes) {
+        const model = extractModelFromBytes(bodyBytes)
         if (model) return model
     }
 
     return extractModelFromPath(restResource)
 }
 
-async function extractModelFromBody(request: Request): Promise<string | null> {
+function extractModelFromBytes(bodyBytes: ArrayBuffer): string | null {
     try {
-        const body = (await request.clone().json()) as { model: string }
-        return body.model || null
+        const len = bodyBytes.byteLength
+        const dec = new TextDecoder()
+        const head = dec.decode(bodyBytes.slice(0, Math.min(len, 4096)))
+        const headMatch = head.match(/"model"\s*:\s*"([^"]+)"/)
+        if (headMatch) return headMatch[1]
+        if (len > 4096) {
+            const tail = dec.decode(bodyBytes.slice(Math.max(0, len - 4096)))
+            const tailMatch = tail.match(/"model"\s*:\s*"([^"]+)"/)
+            if (tailMatch) return tailMatch[1]
+        }
+        const parsed = JSON.parse(dec.decode(bodyBytes)) as { model?: string }
+        return parsed.model || null
     } catch {
         return null
     }
@@ -106,6 +117,7 @@ function extractModelFromPath(restResource: string): string | null {
 
 async function forward(
     request: Request,
+    body: ArrayBuffer | null,
     env: Env,
     ctx: ExecutionContext,
     restResource: string,
@@ -117,11 +129,10 @@ async function forward(
         return new Response('No active keys available', { status: 503 })
     }
 
-    const body = request.body ? await request.arrayBuffer() : null
     let finalBody = body;
 
-    // --- BODY REWRITING FIXES ---
-    if (body) {
+    // --- BODY REWRITING FIXES (only parse JSON for providers that mutate it) ---
+    if (body && (provider === 'google-ai-studio' || provider === 'workers-ai')) {
         try {
             const text = new TextDecoder().decode(body);
             const jsonBody = JSON.parse(text);
@@ -294,7 +305,7 @@ function selectFromAllKeys(keys: schema.Key[], model: string): schema.Key {
 
 // Add this helper function at the bottom of api.ts or above makeGatewayRequest
 async function generateStableCacheKey(body: ArrayBuffer | null): Promise<string | null> {
-    if (!body) return null;
+    if (!body || body.byteLength > 262144) return null;
     try {
         // Decode the body to a string
         const bodyText = new TextDecoder().decode(body);
